@@ -1,0 +1,19 @@
+[project]
+name = "reportteam"
+version = "0.1.0"
+description = "A supervisor-led multi-agent research and report team, built on LangGraph"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.scripts]
+reportteam = "reportteam.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }

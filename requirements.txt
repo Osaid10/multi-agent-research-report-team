@@ -1,0 +1,22 @@
+# Orchestration — the graph that coordinates the team
+langgraph>=1.2.0
+langgraph-checkpoint-sqlite>=3.1.0   # Phase 4: resume a run across processes
+langgraph-supervisor>=0.0.31         # Phase 0 throwaway only; see README
+
+# LangChain building blocks the workers are made of
+langchain>=1.3.0
+langchain-core>=1.0.0
+
+# Tracing (Phase 0 onward) — a misrouting supervisor is near-undebuggable without it
+langsmith>=0.11.0
+
+# Schemas at every model boundary
+pydantic>=2.11.0
+
+# CLI + eval
+typer>=0.19.0
+rich>=13.0.0
+pyyaml>=6.0.0
+
+# Optional: the LangChain-tool research path. Unused unless RESEARCH_BACKEND=tavily.
+# langchain-tavily>=0.2.18
