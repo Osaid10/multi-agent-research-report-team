@@ -64,8 +64,16 @@ def build(settings: Settings | None = None):
 def main() -> None:
     import sys
 
-    from ..trace import RunLog, RunLogger, configure_langsmith, new_run_id, totals
+    from ..trace import (
+        RunLog,
+        RunLogger,
+        configure_langsmith,
+        enable_utf8_console,
+        new_run_id,
+        totals,
+    )
 
+    enable_utf8_console()
     settings = Settings.load()
     traced = configure_langsmith()
     print(f"LangSmith tracing: {'on' if traced else 'off (no LANGSMITH_API_KEY)'}")

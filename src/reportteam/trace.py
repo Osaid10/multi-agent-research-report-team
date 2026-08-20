@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -25,6 +26,24 @@ from typing import Any
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
+
+
+def enable_utf8_console() -> None:
+    """Make stdout/stderr UTF-8 so citations survive printing.
+
+    Windows consoles default to cp1252, which cannot encode the em-dashes and
+    accented characters that turn up constantly in real article titles. The
+    data is fine either way — it is stored and written to disk as UTF-8 — but
+    an unreadable citation in the terminal looks like a data bug and sends you
+    hunting for one.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):  # pragma: no cover - redirected stream
+                pass
 
 
 def configure_langsmith() -> bool:
