@@ -27,6 +27,7 @@ import yaml
 from eval.judge import judge
 from eval.route_accuracy import check, summarise
 from reportteam import baseline as baseline_module
+from reportteam.claude_cli import ClaudeSessionLimitError
 from reportteam.config import Settings
 from reportteam.graphs import team
 from reportteam.state import initial_state
@@ -65,7 +66,10 @@ def run_team(topic: str, settings: Settings) -> dict:
                 "configurable": {"thread_id": run_id},
             },
         )
-    except Exception as exc:  # a run that dies is a data point, not a crash
+    except ClaudeSessionLimitError:
+        # Not a data point -- nothing will succeed until the allowance resets.
+        raise
+    except Exception as exc:  # a run that dies IS a data point, not a crash
         finished = False
         result = {"final_report": "", "error": f"{type(exc).__name__}: {exc}"}
 
@@ -95,6 +99,8 @@ def run_baseline(topic: str, settings: Settings) -> dict:
     try:
         result = baseline_module.run(topic, settings)
         error = None
+    except ClaudeSessionLimitError:
+        raise
     except Exception as exc:
         result = {"report": "", "cost_usd": 0.0, "web_searches": 0}
         error = f"{type(exc).__name__}: {exc}"
@@ -128,8 +134,12 @@ def evaluate(topic: str, bucket: str, system: str, settings: Settings, refresh: 
     row["quality"] = scores.mean
     row["words"] = len(row["report"].split())
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(row, indent=1, default=str), encoding="utf-8")
+    # Only cache a row that actually produced a report. Caching a failure
+    # bakes it in permanently -- the next sweep reads it straight back and the
+    # results table quietly reports a crash as a score of 1.00.
+    if not row.get("error") and row.get("words", 0) > 0:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(row, indent=1, default=str), encoding="utf-8")
     return row
 
 
@@ -207,21 +217,42 @@ def main() -> None:
             if index < len(bucket_topics):
                 ordered.append((bucket, bucket_topics[index]))
 
-    for bucket, topic in ordered:
-        for system in systems:
-            done += 1
-            print(f"[{done}/{total}] {system:8} | {bucket:16} | {topic[:60]}", flush=True)
-            row = evaluate(topic, bucket, system, settings, args.refresh)
-            rows.append(row)
-            print(
-                f"          quality={row['quality']:.2f} "
-                f"cost=${row['cost_usd']:.3f} wall={row['wall_s']:.0f}s "
-                f"words={row['words']}"
-                + (f"  ERROR: {row['error']}" if row.get("error") else ""),
-                flush=True,
-            )
+    stopped_early = ""
+    try:
+        for bucket, topic in ordered:
+            for system in systems:
+                done += 1
+                print(
+                    f"[{done}/{total}] {system:8} | {bucket:16} | {topic[:60]}",
+                    flush=True,
+                )
+                row = evaluate(topic, bucket, system, settings, args.refresh)
+                rows.append(row)
+                print(
+                    f"          quality={row['quality']:.2f} "
+                    f"cost=${row['cost_usd']:.3f} wall={row['wall_s']:.0f}s "
+                    f"words={row['words']}"
+                    + (f"  ERROR: {row['error']}" if row.get("error") else ""),
+                    flush=True,
+                )
+    except ClaudeSessionLimitError as exc:
+        # Stop the sweep, keep what completed. Everything already cached
+        # survives, so re-running after the reset resumes rather than restarts.
+        stopped_early = str(exc)
+        print(f"\n!! STOPPED: {exc}", flush=True)
+        print(
+            f"!! {len(rows)} of {total} evaluations completed. Cached results are "
+            f"kept -- re-run after the reset to continue where this left off.",
+            flush=True,
+        )
 
-    team_rows = [r for r in rows if r["system"] == "team"]
+    # Scored rows only. A run that failed has no report to judge, and folding
+    # its floor score of 1.00 into the means would misreport an outage as poor
+    # quality -- which is exactly what an earlier sweep did.
+    scored = [r for r in rows if not r.get("error") and r.get("words", 0) > 0]
+    failed = [r for r in rows if r not in scored]
+
+    team_rows = [r for r in scored if r["system"] == "team"]
     routes = summarise(
         [check(r["route"], max_revisions=settings.max_revisions, finished=r["finished"])
          for r in team_rows]
@@ -233,13 +264,29 @@ def main() -> None:
         json.dumps(rows, indent=1, default=str), encoding="utf-8"
     )
 
-    table = _table(rows, list(topics))
+    table = _table(scored, list(topics))
+    topics_done = len({r["topic"] for r in scored})
     report_lines = [
         "# Evaluation: multi-agent team vs single-agent baseline",
         "",
-        f"Topics: {sum(len(t) for t in topics.values())} across {len(topics)} buckets. "
+        f"Topics scored: **{topics_done}** of {sum(len(t) for t in topics.values())} "
+        f"across {len(topics)} buckets. "
         f"Quality is the mean of five 1-5 judge scores; Cite is citation integrity.",
         "",
+    ]
+    if stopped_early:
+        report_lines += [
+            f"> **Partial sweep.** Stopped early: {stopped_early}",
+            ">",
+            "> Completed results are cached; re-running resumes from here.",
+            "",
+        ]
+    if failed:
+        report_lines += [
+            f"> {len(failed)} run(s) failed and are excluded from the scores below.",
+            "",
+        ]
+    report_lines += [
         table,
         "",
         "## Route accuracy (team only)",

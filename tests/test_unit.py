@@ -18,6 +18,7 @@ from eval.route_accuracy import check, summarise
 from reportteam.claude_cli import (
     ChatClaudeCLI,
     ClaudeCLIError,
+    ClaudeSessionLimitError,
     _action_schema,
     _split_prompt,
 )
@@ -246,6 +247,79 @@ def test_bare_is_never_passed():
 def test_json_schema_is_serialised_into_argv():
     argv = ChatClaudeCLI(role="x")._argv("s", {"type": "object"})
     assert json.loads(argv[argv.index("--json-schema") + 1]) == {"type": "object"}
+
+
+# --- failure handling ----------------------------------------------------
+
+
+def test_session_limit_raises_its_own_error_type():
+    """A spent allowance must be distinguishable from an ordinary failure.
+
+    An eval that treats it as one more failed row races through every
+    remaining topic in seconds, scoring each empty report 1.00.
+    """
+    model = ChatClaudeCLI(role="x")
+    envelope = json.dumps(
+        {
+            "is_error": True,
+            "result": "You've hit your session limit · resets 9:30pm (Asia/Karachi)",
+            "terminal_reason": "api_error",
+        }
+    )
+    with pytest.raises(ClaudeSessionLimitError, match="session limit"):
+        model._parse(envelope, "")
+
+
+def test_budget_exhausted_names_the_setting_to_change():
+    model = ChatClaudeCLI(role="critic", max_budget_usd=0.5)
+    envelope = json.dumps(
+        {"is_error": True, "result": "", "terminal_reason": "budget_exhausted"}
+    )
+    with pytest.raises(ClaudeCLIError, match="max_budget_usd"):
+        model._parse(envelope, "")
+
+
+def test_not_logged_in_mentions_bare():
+    model = ChatClaudeCLI(role="x")
+    envelope = json.dumps(
+        {"is_error": True, "result": "Not logged in · Please run /login"}
+    )
+    with pytest.raises(ClaudeCLIError, match="--bare"):
+        model._parse(envelope, "")
+
+
+def test_failed_rows_are_never_cached(tmp_path, monkeypatch):
+    """Caching a failure bakes an outage into the results table forever."""
+    import eval.run_eval as run_eval
+
+    monkeypatch.setattr(run_eval, "CACHE_DIR", tmp_path)
+    monkeypatch.setattr(run_eval, "_cache_path", lambda t, s: tmp_path / f"{s}.json")
+    monkeypatch.setattr(
+        run_eval,
+        "run_baseline",
+        lambda topic, settings: {
+            "system": "baseline", "topic": topic, "report": "",
+            "cost_usd": 0.0, "wall_s": 1.0, "web_searches": 0,
+            "route": ["baseline"], "finished": False, "error": "boom",
+        },
+    )
+    monkeypatch.setattr(run_eval, "judge", lambda topic, report, settings: _StubScores())
+
+    row = run_eval.evaluate("t", "easy_factual", "baseline", Settings.load(), False)
+    assert row["error"] == "boom"
+    assert list(tmp_path.glob("*.json")) == []
+
+
+class _StubScores:
+    coverage = citation_integrity = structure = specificity = usefulness = 1
+    notable_weakness = "empty"
+    mean = 1.0
+
+    def model_dump(self) -> dict:
+        return {
+            "coverage": 1, "citation_integrity": 1, "structure": 1,
+            "specificity": 1, "usefulness": 1, "notable_weakness": "empty",
+        }
 
 
 # --- config --------------------------------------------------------------

@@ -45,6 +45,19 @@ log = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+class ClaudeSessionLimitError(RuntimeError):
+    """The account's usage allowance is spent until it resets.
+
+    Separated from every other failure because the correct response is the
+    opposite one. Ordinary errors are per-call: the run that failed is lost, the
+    next one may well succeed, so a sweep should record the failure and carry
+    on. This error means *nothing* will succeed until the reset, and carrying on
+    is actively harmful -- an eval that kept going burned through 18 remaining
+    topics in under two minutes, scored every empty report 1.00, and cached them
+    as if they were results. Callers running a batch must stop on this.
+    """
+
+
 class ClaudeCLIError(RuntimeError):
     """The CLI could not produce a usable answer.
 
@@ -346,6 +359,13 @@ class ChatClaudeCLI(BaseChatModel):
         result_text = str(envelope.get("result") or "")
 
         if envelope.get("is_error"):
+            lowered = result_text.lower()
+            if "session limit" in lowered or "usage limit" in lowered:
+                # Carries the reset time the CLI reported, because that is the
+                # only actionable part of this failure.
+                raise ClaudeSessionLimitError(
+                    f"{self.role}: {result_text.strip()[:200]}"
+                )
             if "not logged in" in result_text.lower():
                 raise ClaudeCLIError(
                     "the CLI is not logged in. Run `claude` once interactively and "
