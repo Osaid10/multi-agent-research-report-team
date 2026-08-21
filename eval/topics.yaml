@@ -1,0 +1,43 @@
+# The evaluation set: 20 topics in three buckets.
+#
+# The buckets are the whole design. A multi-agent team costs several times what
+# one agent costs, so the interesting question is never "is the team good?" but
+# "on which kind of topic does the team earn its cost?" Splitting the set by
+# shape is what lets the results answer that instead of averaging it away.
+#
+# easy_factual   - one narrow question with a findable answer. The team's
+#                  planner/researcher/writer/critic overhead has little to bite
+#                  on here, so this is where the baseline should compete best.
+# broad_multipart- genuinely several sub-topics that must each be researched and
+#                  then synthesised. This is where fan-out and an outline should
+#                  pay off, if they ever do.
+# ambiguous      - underspecified or contested, where the work is partly
+#                  deciding what the question means. Tests whether the planner
+#                  imposes a sensible frame and whether the critic catches
+#                  confident claims the evidence does not support.
+
+easy_factual:
+  - What is the current energy density of commercial lithium iron phosphate battery cells?
+  - How much electricity did data centres consume globally in 2025?
+  - What is the status of the EU's Digital Markets Act enforcement against Apple?
+  - How fast has Starlink's subscriber base grown since 2023?
+  - What are the approved medical uses of GLP-1 receptor agonists?
+  - What is the current record efficiency for a perovskite-silicon tandem solar cell?
+  - How many operational small modular reactors exist worldwide today?
+
+broad_multipart:
+  - How are European grid operators handling the rise in negative electricity prices?
+  - What is the current state of solid-state battery commercialisation across manufacturers?
+  - How has the semiconductor export control regime evolved and what has its measured effect been?
+  - What are the main technical and economic barriers to green hydrogen at scale?
+  - How are different countries regulating AI foundation models, and where do the approaches diverge?
+  - What has happened to global offshore wind project economics since 2023?
+  - How is the shipping industry approaching decarbonisation, and which fuels are actually being ordered?
+
+ambiguous:
+  - Is nuclear power cost-competitive?
+  - Has remote work been good for productivity?
+  - Are electric vehicles actually better for the climate?
+  - Is the AI industry in a bubble?
+  - Has microplastics research established real health harm?
+  - Are heat pumps actually cheaper to run than gas boilers?

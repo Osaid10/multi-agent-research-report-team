@@ -240,6 +240,13 @@ class ChatClaudeCLI(BaseChatModel):
             # checkpointer, never resumed through the CLI's own session store.
             "--no-session-persistence",
             "--disable-slash-commands",
+            # Without this a worker inherits the *user's* MCP servers. A
+            # researcher run on this machine reached for
+            # `mcp__playwright__browser_navigate` — a browser it was never
+            # granted, from a server this project knows nothing about. That is
+            # a reproducibility hole (the team behaves differently per machine)
+            # and a cost one (denied calls still burn turns).
+            "--strict-mcp-config",
         ]
 
         if self.tools:
@@ -345,10 +352,19 @@ class ChatClaudeCLI(BaseChatModel):
                     "sign in. (If you passed --bare anywhere, remove it: it forces "
                     "API-key-only auth and never reads the OAuth session.)"
                 )
+            reason = envelope.get("terminal_reason") or envelope.get("subtype")
+            if reason == "budget_exhausted":
+                # Worth its own message: the fix is a config value, and the
+                # roles that read the whole research set (writer, critic) need
+                # a much larger ceiling than the routing roles.
+                raise ClaudeCLIError(
+                    f"{self.role}: hit its --max-budget-usd ceiling of "
+                    f"${self.max_budget_usd}. Raise `max_budget_usd` for this "
+                    f"role in config.DEFAULT_ROLES -- roles that read the full "
+                    f"research notes need more headroom than routing roles."
+                )
             raise ClaudeCLIError(
-                f"the CLI reported an error "
-                f"[{envelope.get('terminal_reason') or envelope.get('subtype')}]: "
-                f"{result_text[:400]}"
+                f"the CLI reported an error [{reason}]: {result_text[:400]}"
             )
 
         denials = envelope.get("permission_denials") or []

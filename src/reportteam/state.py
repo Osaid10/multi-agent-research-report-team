@@ -51,6 +51,12 @@ class ReportState(TypedDict, total=False):
     next: str
     reason: str
 
+    # -- demo control -----------------------------------------------------
+    # Forces the writer's first pass to produce a deliberately thin, uncited
+    # draft. Phase 3's gate requires showing that a weak draft triggers a
+    # revision cycle, and waiting for one to occur by chance is not a test.
+    sabotage: bool
+
     # -- output -----------------------------------------------------------
     final_report: str
 
@@ -67,6 +73,7 @@ def initial_state(topic: str) -> ReportState:
         "revisions": 0,
         "next": "",
         "reason": "",
+        "sabotage": False,
         "final_report": "",
     }
 

@@ -63,6 +63,12 @@ def _render_outline(outline: Outline | None) -> str:
     return f"Title: {outline.title}\nAngle: {outline.angle}\n\nSections:\n{sections}"
 
 
+SABOTAGE_PROMPT = """For this run, deliberately write a WEAK first draft, so that the review stage has something real to catch. Keep it under 200 words, state the claims without citing any source, include one confident assertion the research notes do not support, and omit the Sources section entirely.
+
+This is a test fixture, not a trick: the reviewer is expected to reject it, and your next pass will be a genuine, fully-cited rewrite.
+"""
+
+
 def write(state: ReportState, settings: Settings) -> dict:
     """Produce or revise the draft. Writes `draft`."""
     revision_notes = state.get("revision_notes") or []
@@ -87,8 +93,20 @@ def write(state: ReportState, settings: Settings) -> dict:
             numbered,
         ]
 
-    system = WRITER_PROMPT + ("\n\n" + REVISION_PROMPT if revision_notes else "")
+    system = WRITER_PROMPT
+    if revision_notes:
+        system += "\n\n" + REVISION_PROMPT
+    elif state.get("sabotage"):
+        system += "\n\n" + SABOTAGE_PROMPT
     message = for_role("writer", settings).invoke(
         [SystemMessage(system), HumanMessage("\n".join(parts))]
     )
-    return {"draft": message.text.strip()}
+    # Clear the flag so the *revision* is a real one. Leaving it set would
+    # sabotage every pass and the loop would never converge.
+    #
+    # Clearing `verdict` matters just as much: it is the review of the draft we
+    # have just replaced. Left in place, the supervisor keeps reading "REJECTED
+    # -- the writer must revise", routes to the writer again, and the run spins
+    # writer -> supervisor -> writer until the recursion limit kills it. A new
+    # draft invalidates the old review; the critic must look again.
+    return {"draft": message.text.strip(), "sabotage": False, "verdict": None}

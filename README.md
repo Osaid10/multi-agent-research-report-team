@@ -1,0 +1,230 @@
+# Multi-Agent Research & Report Team
+
+A supervisor delegates to a planner, a fan-out of researchers, a writer and a
+critic. The critic is the gate: it grades every draft against a rubric and sends
+weak ones back to the writer until they pass. What comes out is a cited report;
+what the project is actually about is the orchestration.
+
+Built for the Mercurial Minds Agentic AI internship, against the LangGraph brief
+in `project_multiagent_langgraph.pdf`.
+
+---
+
+## The system
+
+```
+                                 topic
+                                   │
+                                   ▼
+                          ┌────────────────┐
+                    ┌────▶│   SUPERVISOR   │──── FINISH ────┐
+                    │     │  routes work   │                │
+                    │     └────────────────┘                │
+                    │        │    │     │                   ▼
+                    │        │    │     │             ┌──────────┐
+        ┌───────────┴──┐     │    │     │             │ finalize │
+        │              │     │    │     │             └──────────┘
+   ┌────────┐   ┌──────────┐ │ ┌──────┐ │ ┌────────┐
+   │ writer │   │ planner  │ │ │research│ │ critic │
+   └────────┘   └──────────┘ │ └──────┘ │ └────────┘
+        ▲            │        │    │           │
+        │            ▼        │    │ Send      │ verdict
+        │   ┌─────────────────┐│   ├──────────┐│
+        │   │ approve_outline ││   ▼          ▼▼
+        │   │  (human gate)   ││ researcher ×N  approved? ──▶ finalize
+        │   └─────────────────┘│   │          │
+        │                      │   └──────────┤ rejected
+        └──────────────────────┴──────────────┘  (revise)
+```
+
+Two conditional edges, answering different questions — the distinction the brief
+draws:
+
+- **`route_from_supervisor`** — *who works next?* Reads the `next` state field.
+- **`route_from_critic`** — *approved, or send it back?* Reads the verdict, and
+  owns the revision cap.
+
+### Shared state
+
+Defined in [state.py](src/reportteam/state.py). Most channels overwrite; one does not.
+
+| Channel | Written by | Reducer |
+|---|---|---|
+| `topic` | input | overwrite |
+| `outline` | planner | overwrite |
+| `notes` | researcher(s) | **`operator.add`** — appends |
+| `draft` | writer | overwrite |
+| `verdict` | critic (cleared by writer) | overwrite |
+| `revision_notes` | critic | overwrite |
+| `revisions` | critic | overwrite |
+| `next` / `reason` | supervisor | overwrite |
+| `final_report` | finalize | overwrite |
+
+`notes` is the one that matters. It has used an appending reducer since Phase 1,
+which is why Phase 5's concurrent fan-in needed no merge code and no state
+rewrite — parallelism became a routing change.
+
+### Routing rules
+
+The supervisor is handed a **status summary** — what exists, what is missing —
+never the outline text, the notes or the draft. That keeps its prompt cheap and
+means a worker's output can never be distorted by passing through it (the
+brief's "do not re-paraphrase finished work").
+
+| Worker | May run when |
+|---|---|
+| `planner` | always, if no outline exists |
+| `research` / `researcher` | an outline exists and sub-questions are unanswered |
+| `writer` | outline exists and all sub-questions are answered |
+| `critic` | a draft exists that it has not yet reviewed |
+| `FINISH` | the critic approved, or the revision cap is spent |
+
+Two guards, because they catch different failures: `max_revisions` (a stubborn
+critic) and LangGraph's `recursion_limit` (a routing loop).
+
+---
+
+## Quick start
+
+```bash
+python -m venv .venv && .venv/Scripts/activate      # Windows
+pip install -r requirements.txt && pip install -e .
+claude                                              # sign in once, then quit
+cp .env.example .env                                # optional: add LANGSMITH_API_KEY
+```
+
+There is **no model API key**. Every agent runs through the `claude` CLI on your
+logged-in session — see below.
+
+```bash
+reportteam run "How are grid operators handling negative electricity prices?"
+reportteam run "..." --sabotage            # force a revision cycle
+reportteam run "..." --gated               # pause for outline approval
+reportteam approve --thread-id <id>        # resume, in a separate process
+reportteam baseline "..."                  # single-agent comparison
+reportteam graph --which team              # print the graph
+python -m eval.run_eval --limit 2          # smoke-test the eval
+```
+
+---
+
+## The one big decision: the CLI as the model backend
+
+This project does not call the Anthropic API. Every worker is a
+`claude -p --output-format json` subprocess, wrapped as a LangChain
+`BaseChatModel` in [claude_cli.py](src/reportteam/claude_cli.py). That bought four
+things:
+
+1. **`--json-schema` gives validated structured output.** The envelope returns
+   `structured_output` already parsed and schema-checked, including nested
+   `$defs`. The planner's `Outline` and the critic's `Verdict` need no
+   JSON-repair fallback at all.
+2. **`--tools ""` makes "the supervisor is dumb on tools" structural.** The
+   brief lists this as a guardrail to be prompted for and checked afterwards.
+   Here the supervisor process has no tools, so the violation is impossible.
+3. **Cost and latency arrive per call** — `total_cost_usd`, `modelUsage`,
+   `duration_ms`, `num_turns`. Phase 6's whole measurement story, with no price
+   table to maintain and no token accounting to get wrong.
+4. **Built-in `WebSearch`** — no Tavily key, no second signup.
+
+Wrapping it as a `BaseChatModel` rather than shelling out from nodes keeps
+LangSmith tracing automatic and `with_structured_output()` idiomatic.
+`bind_tools` **emulates** tool calling through the output schema — the model
+picks `tool_call` or `final_answer` inside a generated envelope — which is what
+lets the prebuilt `create_supervisor` helper run against a backend that has no
+tool-calling API.
+
+### Deviations from the brief, stated plainly
+
+- **No Tavily.** Web search is Claude's built-in server-side tool, so the search
+  loop happens *inside* the researcher process rather than as a LangChain tool
+  bound to a graph node. This fits the brief's own framing (every worker is an
+  agent loop; the graph coordinates them), but it does mean the "bind a tool to
+  a node" exercise is not on the critical path. `RESEARCH_BACKEND=tavily` is
+  reserved for that path.
+- **`langgraph-supervisor` appears only in Phase 0.** It is soft-deprecated —
+  LangChain now recommends building the supervisor pattern directly — and it
+  needs a tool-calling model. The brief's "build it by hand first" instruction
+  and the library's own advice happen to agree.
+
+### Four gotchas, each of which cost a debugging session
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Every call ~5x too expensive | `--append-system-prompt` keeps Claude Code's full harness prompt (7,375 cache-creation tokens on a two-line request) | `--system-prompt` replaces it — 940 tokens |
+| Researcher burns turns explaining it can't search (one $0.43 call) | `--tools WebSearch` grants existence, not permission | add `--allowedTools` + `--permission-mode dontAsk` |
+| `"Not logged in"` | `--bare` forces API-key-only auth and never reads the OAuth session | never pass `--bare` |
+| Researcher reaches for `mcp__playwright__browser_navigate` | workers inherit the *user's* global MCP servers | `--strict-mcp-config` |
+
+Two more, found while building:
+
+- **Windows can't `CreateProcess` a `.cmd`**, and going via `cmd.exe /c` re-parses
+  the JSON schema argument. The npm shim execs a real `claude.exe` — target that.
+  Prompts go in on **stdin**, because Windows caps a command line at ~32K chars
+  and the writer's prompt carries every research note.
+- **`usage.input_tokens` under-reports** (9 tokens for a 10K-token prompt). Cost
+  accounting must read `modelUsage[*]`, which is the per-call total.
+
+---
+
+## The phases, and what each one actually taught
+
+Every phase stays runnable (`--graph phase1` … `--graph team`); the progression
+is part of the deliverable.
+
+| Phase | Graph | Concept | Result |
+|---|---|---|---|
+| 0 | `phase0_hello` | prebuilt supervisor, tracing | routes and finishes; 3 calls to count 8 words |
+| 1 | `phase1_manual` | `StateGraph`, `next`, conditional edges | `supervisor → researcher → supervisor → FINISH` |
+| 2 | `phase2_pipeline` | shared state, multi-step delegation | 2,592-word report, 97 citations, 42 searches |
+| 3 | `phase3_reflection` | reflection cycle, structured grading, loop guard | see below |
+| 4 | `phase4_persist` | checkpointer, threads, `interrupt()` | pause and resume across two processes |
+| 5 | `team` | `Send` fan-out, map-reduce | research in one superstep instead of N |
+| 6 | `eval/` | route accuracy, quality rubric, cost | `FINDINGS.md` |
+
+**Phase 0 vs Phase 1 is worth running back to back.** The prebuilt helper routes
+through `transfer_to_<worker>` tool calls; you can see the machinery in its route
+(`supervisor → agent → tools → counter → model → supervisor`). The hand-built
+version routes on a state field, with no tools anywhere near the supervisor.
+
+**On the checkpointer:** the brief suggests `InMemorySaver`, and Phase 4 starts
+there — but in-memory state dies with the process, so "resume" can only ever mean
+"resume inside the same script". SQLite makes `reportteam run --gated` and
+`reportteam approve --thread-id` genuinely separate invocations, which is the
+behaviour being taught. `--in-memory` shows the difference.
+
+**On the recursion limit:** the brief warns that hitting it is almost always a
+routing loop to fix in the prompt, not to raise away. That warning earned its
+place — an early run spun `writer → supervisor → writer` until it tripped,
+because the writer produced a new draft while the *old* rejected verdict was
+still in state, so the supervisor kept reading "the writer must revise". The fix
+was for a new draft to invalidate its review, not to move the limit. The limit
+then moved from 25 to 40 for a different and legitimate reason: the sequential
+graphs spend two supersteps per sub-question, so a five-question topic with two
+revisions genuinely reaches ~23.
+
+---
+
+## Layout
+
+```
+src/reportteam/
+  claude_cli.py     the model backend: claude -p as a BaseChatModel
+  config.py         per-role model, tools and budget ceilings
+  models.py         the typed contracts between agents
+  state.py          ReportState and its reducers
+  trace.py          LangSmith + the local JSONL run log
+  baseline.py       the single-agent comparison
+  cli.py            entry point
+  agents/           planner, researcher, writer, critic, supervisor
+  graphs/           phase0 … phase5, each still runnable
+eval/
+  topics.yaml       20 topics in 3 buckets
+  route_accuracy.py did it delegate sensibly and stop?
+  judge.py          LLM-as-judge quality rubric
+  run_eval.py       the sweep, with per-topic caching
+```
+
+Observability is split on purpose: **LangSmith for debugging** (a misrouting
+supervisor is near-impossible to read from code), **a local JSONL log for
+measuring** (so the eval is a pure file reader with no network dependency).

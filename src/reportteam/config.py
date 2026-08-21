@@ -59,6 +59,11 @@ class RoleConfig:
     # A per-call ceiling, not a per-run one. Sized generously enough that a
     # legitimate call never trips it, and tight enough that a runaway worker
     # stops before it costs real money.
+    #
+    # The spread is wide on purpose. Routing roles see a short status summary;
+    # the writer and critic both read the entire research set, so their prompts
+    # grow with the number of sub-questions. A $0.50 critic ceiling looked
+    # ample until a five-sub-question topic blew straight through it.
     max_budget_usd: float = 0.75
 
 
@@ -71,15 +76,15 @@ class RoleConfig:
 DEFAULT_ROLES: dict[str, RoleConfig] = {
     "supervisor": RoleConfig(model="haiku", tools=(), max_budget_usd=0.25),
     "planner": RoleConfig(model="haiku", tools=(), max_budget_usd=0.25),
-    "researcher": RoleConfig(model="haiku", tools=("WebSearch",), max_budget_usd=0.60),
-    "writer": RoleConfig(model="sonnet", tools=(), max_budget_usd=1.00),
-    "critic": RoleConfig(model="sonnet", tools=(), max_budget_usd=0.50),
+    "researcher": RoleConfig(model="haiku", tools=("WebSearch",), max_budget_usd=0.75),
+    "writer": RoleConfig(model="sonnet", tools=(), max_budget_usd=2.00),
+    "critic": RoleConfig(model="sonnet", tools=(), max_budget_usd=2.00),
     # The Phase 6 comparison point: one agent, one shot, same web access the
     # team gets, so the only variable is the orchestration.
     "baseline": RoleConfig(model="sonnet", tools=("WebSearch",), max_budget_usd=1.50),
     # Phase 6's LLM-as-judge. Deliberately not the same model as the critic —
     # a grader that shares the writer's blind spots inflates the scores.
-    "judge": RoleConfig(model="sonnet", tools=(), max_budget_usd=0.40),
+    "judge": RoleConfig(model="sonnet", tools=(), max_budget_usd=1.00),
 }
 
 
@@ -93,7 +98,19 @@ class Settings:
     # Hitting the recursion limit is almost always a routing bug — fix the
     # prompt, not the limit.
     max_revisions: int = 2
-    recursion_limit: int = 25
+    # The brief suggests ~25, with the warning that hitting it is almost always
+    # a routing loop to be fixed in the prompt rather than raised away. That
+    # warning earned its place here: an early run spun
+    # writer -> supervisor -> writer until it tripped, and the fix was to
+    # invalidate the stale verdict, not to move the limit.
+    #
+    # 40 is still a real guard. The sequential graphs cost two supersteps per
+    # sub-question (researcher, then supervisor), so a five-question topic with
+    # two revisions legitimately reaches ~23 -- uncomfortably close to 25 for a
+    # limit whose whole job is to distinguish "busy" from "broken". The
+    # parallel team graph collapses all that research into one superstep and
+    # never comes near it.
+    recursion_limit: int = 40
 
     # -- execution --------------------------------------------------------
     # Phase 5 fans researchers out as concurrent subprocesses. Capped because
@@ -124,7 +141,7 @@ class Settings:
         return cls(
             roles=roles,
             max_revisions=int(os.environ.get("REPORTTEAM_MAX_REVISIONS", "2")),
-            recursion_limit=int(os.environ.get("REPORTTEAM_RECURSION_LIMIT", "25")),
+            recursion_limit=int(os.environ.get("REPORTTEAM_RECURSION_LIMIT", "40")),
             max_concurrent_researchers=int(
                 os.environ.get("REPORTTEAM_CONCURRENCY", "4")
             ),
