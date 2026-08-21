@@ -196,19 +196,30 @@ def main() -> None:
     rows: list[dict] = []
     done = 0
 
-    for bucket, bucket_topics in topics.items():
-        for topic in bucket_topics:
-            for system in systems:
-                done += 1
-                print(f"[{done}/{total}] {system:8} | {bucket:16} | {topic[:60]}")
-                row = evaluate(topic, bucket, system, settings, args.refresh)
-                rows.append(row)
-                print(
-                    f"          quality={row['quality']:.2f} "
-                    f"cost=${row['cost_usd']:.3f} wall={row['wall_s']:.0f}s "
-                    f"words={row['words']}"
-                    + (f"  ERROR: {row['error']}" if row.get("error") else "")
-                )
+    # Round-robin across buckets rather than finishing one bucket at a time.
+    # A full sweep takes hours; if it is interrupted, an interleaved order
+    # leaves a partial result that still spans easy/broad/ambiguous, which is
+    # the comparison the whole eval exists to make. Bucket-at-a-time would
+    # leave a prefix that says nothing about where the team earns its cost.
+    ordered: list[tuple[str, str]] = []
+    for index in range(max(len(t) for t in topics.values())):
+        for bucket, bucket_topics in topics.items():
+            if index < len(bucket_topics):
+                ordered.append((bucket, bucket_topics[index]))
+
+    for bucket, topic in ordered:
+        for system in systems:
+            done += 1
+            print(f"[{done}/{total}] {system:8} | {bucket:16} | {topic[:60]}", flush=True)
+            row = evaluate(topic, bucket, system, settings, args.refresh)
+            rows.append(row)
+            print(
+                f"          quality={row['quality']:.2f} "
+                f"cost=${row['cost_usd']:.3f} wall={row['wall_s']:.0f}s "
+                f"words={row['words']}"
+                + (f"  ERROR: {row['error']}" if row.get("error") else ""),
+                flush=True,
+            )
 
     team_rows = [r for r in rows if r["system"] == "team"]
     routes = summarise(

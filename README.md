@@ -172,15 +172,53 @@ Two more, found while building:
 Every phase stays runnable (`--graph phase1` … `--graph team`); the progression
 is part of the deliverable.
 
-| Phase | Graph | Concept | Result |
+| Phase | Graph | Concept | Verified result |
 |---|---|---|---|
 | 0 | `phase0_hello` | prebuilt supervisor, tracing | routes and finishes; 3 calls to count 8 words |
 | 1 | `phase1_manual` | `StateGraph`, `next`, conditional edges | `supervisor → researcher → supervisor → FINISH` |
 | 2 | `phase2_pipeline` | shared state, multi-step delegation | 2,592-word report, 97 citations, 42 searches |
-| 3 | `phase3_reflection` | reflection cycle, structured grading, loop guard | see below |
-| 4 | `phase4_persist` | checkpointer, threads, `interrupt()` | pause and resume across two processes |
-| 5 | `team` | `Send` fan-out, map-reduce | research in one superstep instead of N |
-| 6 | `eval/` | route accuracy, quality rubric, cost | `FINDINGS.md` |
+| 3 | `phase3_reflection` | reflection cycle, structured grading, loop guard | sabotaged draft → 2 revisions → clean termination |
+| 4 | `phase4_persist` | checkpointer, threads, `interrupt()` | paused, process exited, **separate** process resumed and finished |
+| 5 | `team` | `Send` fan-out, map-reduce | 270.6s of research compressed into 104.4s — **2.6×** |
+| 6 | `eval/` | route accuracy, quality rubric, cost | [FINDINGS.md](FINDINGS.md) |
+
+### Phase 3: the critic earns its keep
+
+Run `--sabotage` and the writer deliberately produces a thin, uncited first
+draft. The critic rejected it, the writer revised, and on the *second* pass the
+critic still caught two real defects — not stylistic ones:
+
+> Section 1: *'at a 4:1 ratio, a heat pump needs to comfortably clear an SPF of
+> 4.0'* is attached to the Think House citation, but the notes only state the
+> 3:1/SPF-3.0 threshold — this is the writer's own extrapolation.
+
+> Section 4: the £465 figure does not appear in the Findings; it appears only
+> embedded in two source *titles*.
+
+Both are the failure the brief names: claims the research does not support. The
+report shipped with an explicit note that it hit the revision limit without
+passing review, rather than quietly presenting itself as approved.
+
+### Phase 5: what the fan-out actually bought
+
+Five sub-questions, from the run log:
+
+```
+researcher ends +  0.0s  duration 15.8s  -> started -15.8s
+researcher ends + 27.2s  duration 43.4s  -> started -16.1s
+researcher ends + 34.6s  duration 50.8s  -> started -16.1s
+researcher ends + 60.0s  duration 75.9s  -> started -15.9s
+researcher ends + 88.6s  duration 84.8s  -> started + 3.8s   <- waited for a slot
+```
+
+Four start together (the concurrency cap); the fifth starts the moment the first
+releases its slot. **270.6s of model work inside a 104.4s window.** Supervisor
+calls also fell from 7 to 3, because it no longer routes each question
+individually — the saving is more than wall-clock.
+
+A whole-run check: the parallel graph finished in **299s wall against 438s of
+model time**. Model time exceeding wall-clock is only possible if work
+overlapped.
 
 **Phase 0 vs Phase 1 is worth running back to back.** The prebuilt helper routes
 through `transfer_to_<worker>` tool calls; you can see the machinery in its route
