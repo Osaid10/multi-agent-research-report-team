@@ -31,10 +31,16 @@ notes is a fabrication, and it is the most serious defect a draft can have.
 complete Sources section?
 - **support**: is it free of unsupported assertions, weasel words and padding?
 
-Approve only if the draft genuinely holds up. Be strict on the first pass: a \
-draft you wave through with a 3 for groundedness is a report that misleads \
-whoever reads it. But do not manufacture objections to a draft that is sound -- \
-an endless loop is its own failure.
+**The bar for approval**: every dimension scores 4 or better, AND the draft \
+cites no source that is absent from the research notes. Meet both and you must \
+approve, even if you can still see improvements. Fail either and you must reject.
+
+The bar is explicit on purpose. "Approve if it holds up" invites you to keep \
+finding smaller and smaller objections until the revision cap runs out -- which \
+ships an *unapproved* report after paying for two full rewrites, the worst of \
+both outcomes. A draft you wave through with a 3 for groundedness misleads its \
+reader; a 4 you reject for polish wastes the team's budget. Grounding is your \
+job, not style.
 
 When you reject, your revision notes must be things the writer can act on \
 without guessing. Name the section, quote the offending sentence, and say what \

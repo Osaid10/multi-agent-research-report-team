@@ -119,6 +119,42 @@ def build(settings: Settings | None = None, *, checkpointer: Any = None):
     return graph.compile(checkpointer=checkpointer)
 
 
+def _serde():
+    """A serializer that knows our own state types, and only ours.
+
+    The state channels carry Pydantic models (`Outline`, `ResearchNote`,
+    `Verdict`), and LangGraph's default serializer will happily rebuild any
+    class named in a checkpoint -- warning as it does so, because anyone able to
+    write to the checkpoint database could name a class of their choosing and
+    get it constructed. Declaring the allowlist explicitly closes that and, as a
+    side effect, silences a deprecation warning that will become a hard failure.
+
+    The 49 built-in safe types (primitives, paths, LangChain messages) stay
+    allowed; this only adds the models this project defines.
+    """
+    from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+    from ..models import (
+        Outline,
+        ResearchNote,
+        RubricScores,
+        Source,
+        SubQuestion,
+        Verdict,
+    )
+
+    return JsonPlusSerializer(
+        allowed_msgpack_modules=[
+            Outline,
+            SubQuestion,
+            ResearchNote,
+            Source,
+            Verdict,
+            RubricScores,
+        ]
+    )
+
+
 def open_checkpointer(settings: Settings, in_memory: bool = False):
     """Build a checkpointer and return it with the connection to close.
 
@@ -128,12 +164,12 @@ def open_checkpointer(settings: Settings, in_memory: bool = False):
     exits, and is re-invoked later to resume needs to own that lifetime itself.
     """
     if in_memory:
-        return InMemorySaver(), None
+        return InMemorySaver(serde=_serde()), None
 
     settings.checkpoint_db.parent.mkdir(parents=True, exist_ok=True)
     # check_same_thread=False because LangGraph may touch the connection from
     # a worker thread during fan-out.
     conn = sqlite3.connect(str(settings.checkpoint_db), check_same_thread=False)
-    saver = SqliteSaver(conn)
+    saver = SqliteSaver(conn, serde=_serde())
     saver.setup()
     return saver, conn
