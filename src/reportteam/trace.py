@@ -20,7 +20,7 @@ import os
 import sys
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +176,34 @@ class RunLogger(BaseCallbackHandler):
 
     def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         self.log.event("llm_error", error=f"{type(error).__name__}: {error}")
+
+
+def recent_spend(path: Path, hours: float = 5.0) -> float:
+    """Notional spend recorded in the last `hours`, across every run.
+
+    A stand-in for "how much of the session allowance is left", which the CLI
+    does not expose outside an interactive `/usage`. Subscription limits run on
+    a rolling window, so this reads the same shape: every model call ever made
+    through this project is in the run log with its reported cost, and summing
+    a trailing window approximates where you are against the ceiling.
+
+    Approximate on two counts, and worth saying so: `total_cost_usd` is notional
+    API-equivalent spend rather than allowance units, and any Claude usage
+    outside this project is invisible here. Use it to stop a long batch before
+    it exhausts the account, not as an exact gauge.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    spend = 0.0
+    for event in RunLog.read(path):
+        if event.get("kind") != "llm":
+            continue
+        try:
+            when = datetime.fromisoformat(str(event.get("ts")))
+        except ValueError:
+            continue
+        if when >= cutoff:
+            spend += float(event.get("cost_usd") or 0)
+    return round(spend, 4)
 
 
 def totals(events: list[dict]) -> dict[str, Any]:

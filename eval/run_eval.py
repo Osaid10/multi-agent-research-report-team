@@ -36,8 +36,13 @@ from reportteam.trace import (
     RunLogger,
     enable_utf8_console,
     new_run_id,
+    recent_spend,
     totals,
 )
+
+class _SpendCapReached(RuntimeError):
+    """The trailing-window spend cap was reached; stop before the account is."""
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = ROOT / "out" / "eval_cache"
@@ -190,6 +195,25 @@ def main() -> None:
     parser.add_argument("--bucket", default="", help="Only this bucket.")
     parser.add_argument("--refresh", action="store_true", help="Ignore the cache.")
     parser.add_argument("--team-only", action="store_true", help="Skip the baseline.")
+    parser.add_argument(
+        "--spend-window-hours",
+        type=float,
+        default=5.0,
+        help=(
+            "Trailing window the spend cap measures over. Set this to the time "
+            "since your allowance last reset, so pre-reset spend is not counted "
+            "against the current session."
+        ),
+    )
+    parser.add_argument(
+        "--max-spend",
+        type=float,
+        default=6.0,
+        help=(
+            "Stop once notional spend in the trailing 5h window reaches this. "
+            "A proxy for the session allowance, which the CLI does not expose."
+        ),
+    )
     args = parser.parse_args()
 
     settings = Settings.load()
@@ -226,6 +250,13 @@ def main() -> None:
                     f"[{done}/{total}] {system:8} | {bucket:16} | {topic[:60]}",
                     flush=True,
                 )
+                spent = recent_spend(settings.run_log, hours=args.spend_window_hours)
+                if args.max_spend and spent >= args.max_spend:
+                    raise _SpendCapReached(
+                        f"${spent:.2f} of notional spend in the trailing "
+                        f"{args.spend_window_hours:g}h window, "
+                        f"at or over the --max-spend cap of ${args.max_spend:.2f}"
+                    )
                 row = evaluate(topic, bucket, system, settings, args.refresh)
                 rows.append(row)
                 print(
@@ -235,7 +266,7 @@ def main() -> None:
                     + (f"  ERROR: {row['error']}" if row.get("error") else ""),
                     flush=True,
                 )
-    except ClaudeSessionLimitError as exc:
+    except (ClaudeSessionLimitError, _SpendCapReached) as exc:
         # Stop the sweep, keep what completed. Everything already cached
         # survives, so re-running after the reset resumes rather than restarts.
         stopped_early = str(exc)
