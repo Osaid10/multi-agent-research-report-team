@@ -112,8 +112,14 @@ def run(
     else:
         compiled = module.build(settings)
 
-    state = initial_state(subject)
-    state["sabotage"] = sabotage
+    # Phase 1 predates the shared ReportState and declares only four channels.
+    # Handing it the full state would push updates at channels its schema does
+    # not define.
+    if graph == "phase1":
+        state = {"topic": subject, "notes": [], "next": "", "reason": ""}
+    else:
+        state = initial_state(subject)
+        state["sabotage"] = sabotage
     if sabotage:
         typer.echo("sabotage: ON -- the first draft will be deliberately weak\n")
 

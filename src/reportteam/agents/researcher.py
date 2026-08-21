@@ -8,6 +8,8 @@ directly). Phase 5 then becomes a routing change rather than a rewrite.
 
 from __future__ import annotations
 
+import threading
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..claude_cli import for_role
@@ -32,6 +34,30 @@ gap is useful; a confident guess is a liability.
 """
 
 
+_LIMITER: threading.BoundedSemaphore | None = None
+_LIMITER_LOCK = threading.Lock()
+
+
+def _limiter(settings: Settings) -> threading.BoundedSemaphore:
+    """Cap how many researcher subprocesses run at once.
+
+    LangGraph dispatches every `Send` in a superstep concurrently, and each
+    researcher here is a whole CLI process. The ceiling that matters is the
+    account's rate limit, not the local CPU, so the cap has to be ours to set
+    -- the graph will happily launch one process per sub-question otherwise.
+
+    Built once and shared: the fan-out runs sync nodes in a thread pool, so a
+    per-call semaphore would cap nothing.
+    """
+    global _LIMITER
+    with _LIMITER_LOCK:
+        if _LIMITER is None:
+            _LIMITER = threading.BoundedSemaphore(
+                max(1, settings.max_concurrent_researchers)
+            )
+    return _LIMITER
+
+
 def research(state: ReportState, settings: Settings) -> dict:
     """Answer one sub-question. Appends to `notes`.
 
@@ -49,20 +75,21 @@ def research(state: ReportState, settings: Settings) -> dict:
             return {}
         question = remaining[0]
 
-    note = (
-        for_role("researcher", settings)
-        .with_structured_output(ResearchNote)
-        .invoke(
-            [
-                SystemMessage(RESEARCHER_PROMPT),
-                HumanMessage(
-                    f"Overall report topic (context only): {state['topic']}\n\n"
-                    f"The question you must answer: {question}\n\n"
-                    f"Copy that question verbatim into the `sub_question` field."
-                ),
-            ]
+    with _limiter(settings):
+        note = (
+            for_role("researcher", settings)
+            .with_structured_output(ResearchNote)
+            .invoke(
+                [
+                    SystemMessage(RESEARCHER_PROMPT),
+                    HumanMessage(
+                        f"Overall report topic (context only): {state['topic']}\n\n"
+                        f"The question you must answer: {question}\n\n"
+                        f"Copy that question verbatim into the `sub_question` field."
+                    ),
+                ]
+            )
         )
-    )
 
     # The model occasionally paraphrases the question despite being told not
     # to, which would break `pending_sub_questions` and send the team round the

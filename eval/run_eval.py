@@ -138,6 +138,14 @@ def _mean(rows: list[dict], key: str) -> float:
     return round(sum(values) / len(values), 3) if values else 0.0
 
 
+def _score_mean(rows: list[dict], dimension: str) -> float:
+    """Mean of one judge dimension across rows."""
+    values = [
+        r["scores"][dimension] for r in rows if isinstance(r.get("scores"), dict)
+    ]
+    return round(sum(values) / len(values), 2) if values else 0.0
+
+
 def _table(rows: list[dict], buckets: list[str]) -> str:
     lines = [
         "| Bucket | System | n | Quality | Cite | Cover | Cost | Wall | Words | Searches |",
@@ -155,8 +163,8 @@ def _table(rows: list[dict], buckets: list[str]) -> str:
             lines.append(
                 f"| {bucket} | {system} | {len(subset)} | "
                 f"{_mean(subset, 'quality'):.2f} | "
-                f"{_mean([{'v': r['scores']['citation_integrity']} for r in subset], 'v'):.2f} | "
-                f"{_mean([{'v': r['scores']['coverage']} for r in subset], 'v'):.2f} | "
+                f"{_score_mean(subset, 'citation_integrity'):.2f} | "
+                f"{_score_mean(subset, 'coverage'):.2f} | "
                 f"${_mean(subset, 'cost_usd'):.3f} | "
                 f"{_mean(subset, 'wall_s'):.0f}s | "
                 f"{_mean(subset, 'words'):.0f} | "
