@@ -5,8 +5,13 @@ critic. The critic is the gate: it grades every draft against a rubric and sends
 weak ones back to the writer until they pass. What comes out is a cited report;
 what the project is actually about is the orchestration.
 
-Built for the Mercurial Minds Agentic AI internship, against the LangGraph brief
-in `project_multiagent_langgraph.pdf`.
+Built for the Mercurial Minds Agentic AI internship, against a LangGraph brief.
+
+**Headline result:** across 7 paired topics the team scored 4.03 against a
+single agent's 4.09 — at **4.9x the cost**. The average hides the finding: the
+team wins on broad and ambiguous topics (**+0.50 citation integrity**) and
+loses on easy factual ones (**-0.67**). Route accuracy was 8/8. Full analysis
+in [FINDINGS.md](FINDINGS.md).
 
 ---
 
@@ -180,7 +185,7 @@ is part of the deliverable.
 | 3 | `phase3_reflection` | reflection cycle, structured grading, loop guard | sabotaged draft → 2 revisions → clean termination |
 | 4 | `phase4_persist` | checkpointer, threads, `interrupt()` | paused, process exited, **separate** process resumed and finished |
 | 5 | `team` | `Send` fan-out, map-reduce | 270.6s of research compressed into 104.4s — **2.6×** |
-| 6 | `eval/` | route accuracy, quality rubric, cost | [FINDINGS.md](FINDINGS.md) |
+| 6 | `eval/` | route accuracy, quality rubric, cost | 100% route accuracy; team wins on hard topics only — [FINDINGS.md](FINDINGS.md) |
 
 ### Phase 3: the critic earns its keep
 
