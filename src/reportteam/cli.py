@@ -83,6 +83,15 @@ def run(
     gated: bool = typer.Option(False, help="Pause after the planner for approval."),
     sabotage: bool = typer.Option(False, help="Force a weak first draft to trigger a revision."),
     thread_id: Optional[str] = typer.Option(None, help="Resume/identify this job."),
+    in_memory: bool = typer.Option(
+        False,
+        "--in-memory",
+        help=(
+            "Use InMemorySaver instead of SQLite for --gated. State dies with "
+            "the process, so `approve` in a new process cannot find the thread "
+            "-- which is the point: it shows why SQLite is needed."
+        ),
+    ),
 ) -> None:
     """Research a topic and write a cited report."""
     enable_utf8_console()
@@ -103,7 +112,7 @@ def run(
     if gated:
         if graph not in {"phase4", "team"}:
             raise typer.BadParameter("--gated needs --graph phase4 or --graph team")
-        checkpointer, conn = phase4_persist.open_checkpointer(settings)
+        checkpointer, conn = phase4_persist.open_checkpointer(settings, in_memory)
         compiled = (
             module.build(settings, checkpointer=checkpointer, gated=True)
             if graph == "team"

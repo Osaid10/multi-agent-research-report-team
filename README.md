@@ -144,9 +144,10 @@ tool-calling API.
 - **No Tavily.** Web search is Claude's built-in server-side tool, so the search
   loop happens *inside* the researcher process rather than as a LangChain tool
   bound to a graph node. This fits the brief's own framing (every worker is an
-  agent loop; the graph coordinates them), but it does mean the "bind a tool to
-  a node" exercise is not on the critical path. `RESEARCH_BACKEND=tavily` is
-  reserved for that path.
+  agent loop; the graph coordinates them), but it is a real gap against the
+  brief's "Tools" row: **no LangChain tool is ever bound to a graph node in this
+  project.** A Tavily backend would close it and is not implemented — stated
+  here rather than left as an implied feature.
 - **`langgraph-supervisor` appears only in Phase 0.** It is soft-deprecated —
   LangChain now recommends building the supervisor pattern directly — and it
   needs a tool-calling model. The brief's "build it by hand first" instruction

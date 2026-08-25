@@ -117,7 +117,6 @@ class Settings:
     # the ceiling here is the account's rate limit, not the local CPU.
     max_concurrent_researchers: int = 4
     cli_timeout_seconds: int = 300
-    research_backend: str = "websearch"  # "websearch" | "tavily"
 
     # -- paths ------------------------------------------------------------
     out_dir: Path = ROOT / "out"
@@ -146,9 +145,6 @@ class Settings:
                 os.environ.get("REPORTTEAM_CONCURRENCY", "4")
             ),
             cli_timeout_seconds=int(os.environ.get("REPORTTEAM_CLI_TIMEOUT", "300")),
-            research_backend=os.environ.get(
-                "REPORTTEAM_RESEARCH_BACKEND", "websearch"
-            ).strip().lower(),
         )
 
     def role(self, name: str) -> RoleConfig:
