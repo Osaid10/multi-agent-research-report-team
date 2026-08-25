@@ -100,10 +100,27 @@ def run_team(topic: str, settings: Settings) -> dict:
 
 
 def run_baseline(topic: str, settings: Settings) -> dict:
+    # The baseline calls the model directly rather than through a graph, so
+    # nothing attaches a RunLogger to it and its cost never reached the run
+    # log. That silently under-counted `recent_spend` -- the spend cap was
+    # blind to roughly a third of a topic-pair's cost -- and left the baseline
+    # out of any later analysis of the log. Record it explicitly.
+    run_id = new_run_id()
+    run_log = RunLog(settings.run_log, run_id, graph="baseline", topic=topic, eval=True)
+
     started = time.monotonic()
     try:
         result = baseline_module.run(topic, settings)
         error = None
+        run_log.event(
+            "llm",
+            role="baseline",
+            cost_usd=result.get("cost_usd", 0.0),
+            duration_ms=result.get("duration_ms", 0),
+            num_turns=result.get("num_turns", 0),
+            web_search_requests=result.get("web_searches", 0),
+        )
+        run_log.event("node", node="baseline", step=1)
     except ClaudeSessionLimitError:
         raise
     except Exception as exc:
@@ -159,6 +176,37 @@ def _score_mean(rows: list[dict], dimension: str) -> float:
         r["scores"][dimension] for r in rows if isinstance(r.get("scores"), dict)
     ]
     return round(sum(values) / len(values), 2) if values else 0.0
+
+
+def _per_topic_table(rows: list[dict]) -> str:
+    """Team vs baseline, topic by topic.
+
+    The bucket averages are what the verdict rests on, but they hide the
+    variance that matters: whether the team wins *consistently* within a bucket
+    or wins one topic hugely and loses the rest. A reader should be able to
+    check that without opening the raw JSON.
+    """
+    paired: dict[str, dict[str, dict]] = {}
+    for row in rows:
+        paired.setdefault(row["topic"], {})[row["system"]] = row
+
+    lines = [
+        "| Bucket | Topic | Team | Base | Δ | Team $ | Base $ |",
+        "|---|---|--:|--:|--:|--:|--:|",
+    ]
+    for topic, pair in sorted(
+        paired.items(), key=lambda kv: (kv[1].get("team", {}).get("bucket", ""), kv[0])
+    ):
+        if len(pair) != 2:
+            continue  # an unpaired row cannot be compared
+        team, base = pair["team"], pair["baseline"]
+        delta = team["quality"] - base["quality"]
+        lines.append(
+            f"| {team['bucket']} | {topic[:52]} | {team['quality']:.2f} | "
+            f"{base['quality']:.2f} | {delta:+.2f} | "
+            f"${team['cost_usd']:.2f} | ${base['cost_usd']:.2f} |"
+        )
+    return "\n".join(lines)
 
 
 def _table(rows: list[dict], buckets: list[str]) -> str:
@@ -319,6 +367,10 @@ def main() -> None:
         ]
     report_lines += [
         table,
+        "",
+        "## Per topic",
+        "",
+        _per_topic_table(scored),
         "",
         "## Route accuracy (team only)",
         "",
