@@ -249,6 +249,58 @@ def test_json_schema_is_serialised_into_argv():
     assert json.loads(argv[argv.index("--json-schema") + 1]) == {"type": "object"}
 
 
+# --- human-in-the-loop gate ----------------------------------------------
+
+
+def _resume_with(answer, outline):
+    """Run approve_outline as if a human resumed the graph with `answer`.
+
+    `interrupt()` needs a live LangGraph execution context, so it is patched to
+    return the resume payload directly -- which is exactly what it does when a
+    real run resumes. That keeps the three payload branches testable without
+    standing up a checkpointer and paying for a planner call.
+    """
+    import reportteam.graphs.phase4_persist as phase4
+
+    state = initial_state("topic")
+    state["outline"] = outline
+
+    original = phase4.interrupt
+    phase4.interrupt = lambda payload: answer
+    try:
+        return phase4.approve_outline(state)
+    finally:
+        phase4.interrupt = original
+
+
+def test_approving_leaves_the_outline_untouched():
+    outline = _outline("q1", "q2")
+    assert _resume_with(True, outline) == {}
+
+
+def test_editing_sections_replaces_only_what_was_sent():
+    outline = _outline("q1", "q2")
+    result = _resume_with({"sections": ["new one", "new two"]}, outline)
+    assert result["outline"].sections == ["new one", "new two"]
+    # Everything the human did not touch survives.
+    assert result["outline"].title == outline.title
+    assert result["outline"].sub_questions == outline.sub_questions
+
+
+def test_rejecting_discards_the_outline_so_the_planner_reruns():
+    """A rejected plan must not be researched anyway."""
+    outline = _outline("q1", "q2")
+    result = _resume_with({"feedback": "too UK-specific, widen it"}, outline)
+    assert result["outline"] is None
+    assert "too UK-specific, widen it" in result["revision_notes"]
+
+
+def test_gate_is_a_noop_when_there_is_no_outline_yet():
+    import reportteam.graphs.phase4_persist as phase4
+
+    assert phase4.approve_outline(initial_state("topic")) == {}
+
+
 # --- failure handling ----------------------------------------------------
 
 
