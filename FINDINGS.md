@@ -96,6 +96,30 @@ critic kept finding smaller objections until the revision cap ran out, shipping
 an *unapproved* report after paying for two rewrites. An explicit bar (every
 dimension ≥4 and no fabricated citations) fixed it.
 
+## The reflection loop, traced
+
+**[LangSmith trace of a run where the critic rejects a draft and it improves](https://smith.langchain.com/o/a1acb5c0-351f-4784-b723-e90a6c1a4661/projects/p/3d3f5ef1-3e0a-4e18-b002-593b30b272da/r/01a047a9-34f7-74b0-8b39-960f075ae076?trace_id=01a047a9-34f7-74b0-8b39-960f075ae076&start_time=2026-08-28T09:17:46.615693)**
+
+Reproduce it with `reportteam run "..." --sabotage`, which makes the writer's
+first pass deliberately thin and uncited so the review stage has something real
+to catch. What the trace shows, end to end:
+
+```
+supervisor -> planner -> supervisor -> research -> researcher (x5, concurrent)
+  -> supervisor -> writer   [sabotaged draft]
+  -> supervisor -> critic   [REJECTED, revision 1]
+  -> writer                 [revised against the critic's notes]
+  -> supervisor -> critic   [APPROVED - coverage 5, groundedness 5, structure 5, support 5]
+  -> finalize
+```
+
+15 model calls, $2.01, 49 web searches, 379s wall against 521s of model time —
+the gap being the five researchers running concurrently. The draft went from
+rejected to straight 5s in one revision, which is the loop doing its job rather
+than rubber-stamping.
+
+Get a link for any run with `reportteam trace-url`.
+
 ## What these numbers cannot support
 
 - **n=7.** Below the brief's 15–25. Two topics per bucket for broad and

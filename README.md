@@ -190,6 +190,8 @@ is part of the deliverable.
 
 ### Phase 3: the critic earns its keep
 
+**[Traced run: critic rejects a draft, writer fixes it, critic approves](https://smith.langchain.com/o/a1acb5c0-351f-4784-b723-e90a6c1a4661/projects/p/3d3f5ef1-3e0a-4e18-b002-593b30b272da/r/01a047a9-34f7-74b0-8b39-960f075ae076?trace_id=01a047a9-34f7-74b0-8b39-960f075ae076&start_time=2026-08-28T09:17:46.615693)**
+
 Run `--sabotage` and the writer deliberately produces a thin, uncited first
 draft. The critic rejected it, the writer revised, and on the *second* pass the
 critic still caught two real defects — not stylistic ones:
