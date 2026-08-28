@@ -15,6 +15,17 @@ in [FINDINGS.md](FINDINGS.md).
 
 ---
 
+## Demo
+
+**[3-minute walkthrough video](demo/demo_3min.mp4)** — one full run: the graph,
+the parallel fan-out, and the critic rejecting a draft and passing the revision.
+
+- `demo/demo.html` — the animated source; open it in a browser and it plays on
+  the same clock. `?t=95` seeks, `?speed=2` runs double, `?paused=1&t=95` freezes a frame.
+- `demo/VOICEOVER.md` — the narration script, cued to each beat.
+
+---
+
 ## The system
 
 ```
@@ -110,6 +121,18 @@ reportteam baseline "..."                  # single-agent comparison
 reportteam graph --which team              # print the graph
 python -m eval.run_eval --limit 2          # smoke-test the eval
 ```
+
+### The 3-minute demo
+
+[demo/demo_3min.mp4](demo/demo_3min.mp4) walks one sabotaged run end to end —
+the critic rejecting a thin draft, the writer revising, and the run terminating
+on the revision cap — then the parallel fan-out and the eval. Every number and
+every quoted critic issue in it is read off `out/runs.jsonl` and the run logs
+for run `0fccd2c95218`; the frames are a replay of that log, not a live capture,
+because the CLI prints only at the end of a run.
+[demo/demo.html](demo/demo.html) is the source and plays on the same clock
+(`?t=95` to seek, `?speed=2` to skim); [demo/VOICEOVER.md](demo/VOICEOVER.md) is
+the narration script with its cue times.
 
 ---
 

@@ -38,7 +38,7 @@
   .chip{font-family:var(--mono);font-size:22px;padding:10px 20px;border:1px solid var(--line);border-radius:999px;background:#101823}
   #s1 .meta{font-family:var(--mono);font-size:20px;color:var(--dim);margin-top:22px}
 
-  #s2{padding:56px 90px;display:grid;grid-template-columns:1180px 1fr;grid-template-rows:auto 1fr;gap:26px 46px}
+  #s2{padding:52px 90px;display:grid;grid-template-columns:1180px 1fr;grid-template-rows:auto auto;gap:24px 46px;align-content:start;align-items:start}
   #s2 .hd{grid-column:1/3}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px}
   .ptitle{font-family:var(--mono);font-size:17px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:16px 24px;border-bottom:1px solid var(--line)}
@@ -57,10 +57,12 @@
 
   #s3{padding:34px 56px;display:grid;grid-template-columns:1030px 1fr;grid-template-rows:auto 1fr;gap:20px 30px}
   #s3 .hd{grid-column:1/3;display:flex;align-items:baseline;gap:24px}
-  #s3 .hd .cmd{font-family:var(--mono);font-size:25px;color:#cfe3ff}
-  #s3 .hd .badge{margin-left:auto;font-family:var(--mono);font-size:16px;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:7px 14px}
+  #s3 .hd .cmd{font-family:var(--mono);font-size:21px;color:#cfe3ff;white-space:nowrap}
+  #s3 .hd .badge{margin-left:auto;flex:none;font-family:var(--mono);font-size:15px;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:7px 12px;white-space:nowrap}
+  .caret{color:#3ddc97;animation:blink 1.05s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
   #term{position:relative;overflow:hidden;font-family:var(--mono);font-size:20.5px;line-height:1.6}
-  #termbody{position:absolute;left:26px;right:26px;bottom:14px}
+  #termbody{position:absolute;left:26px;right:26px;bottom:14px;transition:bottom .45s ease}
   .ln{display:flex;gap:14px;opacity:0;transform:translateY(8px);transition:opacity .3s,transform .3s}
   .ln.on{opacity:1;transform:none}
   .ln .who{width:150px;flex:none;text-align:right;color:var(--dim)}
@@ -76,7 +78,7 @@
   .stat .val{font-family:var(--mono);font-size:30px;margin-top:6px;color:#eaf2fb}
   #statepanel{flex:1}
   #statepanel .row{display:flex;gap:16px;padding:12px 24px;border-bottom:1px solid #172130;font-family:var(--mono);font-size:19px;align-items:baseline}
-  #statepanel .row .k{width:120px;flex:none;color:var(--dim)}
+  #statepanel .row .k{width:142px;flex:none;color:var(--dim)}
   #statepanel .row .v{color:#8d9dae}
   #statepanel .row.set .v{color:#d6e3f1}
   #statepanel .row.hot{background:#12261f}
@@ -99,7 +101,7 @@
   #summary .k{color:var(--dim);display:inline-block;width:140px}
   #summary .route{color:#9fd8ff;font-size:17px;line-height:1.5}
 
-  #s4{padding:60px 110px;display:flex;flex-direction:column;gap:28px}
+  #s4{padding:60px 110px;display:flex;flex-direction:column;justify-content:center;gap:32px}
   .gantt{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 34px 20px}
   .glane{position:relative;height:50px}
   .glane .nm{position:absolute;left:0;top:13px;font-family:var(--mono);font-size:19px;color:var(--dim)}
@@ -110,11 +112,11 @@
   .gaxis span{position:absolute;top:7px;transform:translateX(-50%)}
   .window{position:absolute;top:20px;height:266px;border-left:2px dashed #4aa3ff;border-right:2px dashed #4aa3ff;background:rgba(74,163,255,.06)}
   .windowlab{position:absolute;top:-2px;font-family:var(--mono);font-size:17px;color:#7cc0ff;transform:translateX(-50%)}
-  .big{display:flex;gap:80px;align-items:flex-start}
-  .bignum{font-family:var(--mono);font-size:56px;color:#eaf2fb;line-height:1.1}
-  .bignum small{font-size:19px;color:var(--dim);display:block;letter-spacing:.14em;text-transform:uppercase;margin-top:10px;line-height:1.5}
+  .big{display:flex;gap:64px;align-items:flex-start;justify-content:space-between}
+  .bignum{font-family:var(--mono);font-size:46px;color:#eaf2fb;line-height:1.1;white-space:nowrap}
+  .bignum small{font-size:18px;color:var(--dim);display:block;letter-spacing:.14em;text-transform:uppercase;margin-top:12px;line-height:1.5;white-space:normal}
 
-  #s5{padding:52px 100px;display:grid;grid-template-columns:1080px 1fr;grid-template-rows:auto 1fr;gap:24px 44px}
+  #s5{padding:52px 100px;display:grid;grid-template-columns:1080px 1fr;grid-template-rows:auto auto;gap:24px 44px;align-content:start}
   #s5 .hd{grid-column:1/3}
   table.ev{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:22px}
   table.ev th{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dimmer);text-align:right;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:500}
@@ -158,37 +160,48 @@
 <section class="scene" id="s2" data-start="11.5" data-end="34">
   <div class="hd"><h2 class="rise" data-at="12.0">One graph, two conditional edges</h2></div>
 
-  <div class="panel rise" data-at="12.4" style="padding:14px 10px 4px">
-    <svg viewBox="0 0 1150 470" width="1150" height="470">
+  <div class="panel rise" data-at="12.4" style="padding:16px 12px 10px">
+    <svg viewBox="0 0 1150 600" width="1150" height="600">
       <defs>
         <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="#3a4c62"/>
         </marker>
       </defs>
-      <path class="gedge rise" data-at="13.0" d="M575,92 L575,138"/>
-      <path class="gedge rise" data-at="14.4" d="M500,192 L262,232"/>
-      <path class="gedge rise" data-at="14.7" d="M552,194 L420,232"/>
-      <path class="gedge rise" data-at="15.0" d="M605,194 L730,232"/>
-      <path class="gedge rise" data-at="15.3" d="M655,192 L888,232"/>
-      <path class="gedge rise" data-at="18.4" d="M675,163 L1010,163 L1010,296" style="stroke:#2d6b5c"/>
-      <path class="gedge rise" data-at="17.6" d="M900,286 L900,336 L420,336 L420,290" style="stroke:#7a3448"/>
-      <path class="gedge rise" data-at="18.4" d="M960,286 L1006,296" style="stroke:#2d6b5c"/>
-      <path class="gedge rise" data-at="16.4" d="M740,286 L740,392 L628,392" style="stroke:#2c3a4b"/>
-      <path class="gedge rise" data-at="16.2" d="M262,286 L262,392 L470,392" style="stroke:#2c3a4b"/>
+      <!-- topic in -->
+      <path class="gedge rise" data-at="13.0" d="M575,86 L575,122"/>
+      <!-- supervisor -> workers -->
+      <path class="gedge rise" data-at="14.4" d="M500,182 L200,262"/>
+      <path class="gedge rise" data-at="14.7" d="M540,184 L390,262"/>
+      <path class="gedge rise" data-at="15.0" d="M615,184 L672,262"/>
+      <path class="gedge rise" data-at="15.3" d="M660,180 L862,262"/>
+      <!-- supervisor -> finalize (FINISH) -->
+      <path class="gedge rise" data-at="18.6" d="M695,152 L1065,152 L1065,376" style="stroke:#2d6b5c"/>
+      <!-- critic -> writer (rejected) -->
+      <path class="gedge rise" data-at="17.6" d="M875,320 L875,352 L660,352 L660,324" style="stroke:#7a3448"/>
+      <!-- critic -> finalize (approved) -->
+      <path class="gedge rise" data-at="18.6" d="M950,300 L1035,372" style="stroke:#2d6b5c"/>
+      <!-- research -> researcher xN -->
+      <path class="gedge rise" data-at="16.2" d="M390,320 L390,408"/>
+      <!-- researcher xN -> back to supervisor -->
+      <path class="gedge rise" data-at="16.6" d="M295,434 L40,434 L40,152 L451,152"/>
 
-      <g class="gnode rise" data-at="12.6"><rect x="475" y="42" width="200" height="50"/><text x="575" y="68">topic</text></g>
-      <g class="gnode rise" data-at="13.2"><rect x="475" y="138" width="200" height="54" style="stroke:var(--sup)"/><text x="575" y="166" style="fill:var(--sup)">supervisor</text></g>
-      <g class="gnode rise" data-at="14.4"><rect x="172" y="232" width="180" height="54" style="stroke:var(--plan)"/><text x="262" y="260" style="fill:var(--plan)">planner</text></g>
-      <g class="gnode rise" data-at="14.7"><rect x="356" y="232" width="128" height="54" style="stroke:var(--res)"/><text x="420" y="260" style="fill:var(--res)">research</text></g>
-      <g class="gnode rise" data-at="15.0"><rect x="660" y="232" width="160" height="54" style="stroke:var(--write)"/><text x="740" y="260" style="fill:var(--write)">writer</text></g>
-      <g class="gnode rise" data-at="15.3"><rect x="830" y="232" width="140" height="54" style="stroke:var(--crit)"/><text x="900" y="260" style="fill:var(--crit)">critic</text></g>
-      <g class="gnode rise" data-at="18.4"><rect x="930" y="296" width="160" height="54" style="stroke:var(--fin)"/><text x="1010" y="324" style="fill:var(--fin)">finalize</text></g>
-      <g class="gnode rise" data-at="16.2"><rect x="470" y="366" width="158" height="52" style="stroke-dasharray:6 5"/><text x="549" y="393">researcher ×N</text></g>
+      <g class="gnode rise" data-at="12.6"><rect x="475" y="36" width="200" height="50"/><text x="575" y="61">topic</text></g>
+      <g class="gnode rise" data-at="13.2"><rect x="455" y="122" width="240" height="60" style="stroke:var(--sup)"/><text x="575" y="152" style="fill:var(--sup)">supervisor</text></g>
+      <g class="gnode rise" data-at="14.4"><rect x="115" y="262" width="170" height="58" style="stroke:var(--plan)"/><text x="200" y="291" style="fill:var(--plan)">planner</text></g>
+      <g class="gnode rise" data-at="14.7"><rect x="315" y="262" width="150" height="58" style="stroke:var(--res)"/><text x="390" y="291" style="fill:var(--res)">research</text></g>
+      <g class="gnode rise" data-at="15.0"><rect x="580" y="262" width="160" height="58" style="stroke:var(--write)"/><text x="660" y="291" style="fill:var(--write)">writer</text></g>
+      <g class="gnode rise" data-at="15.3"><rect x="800" y="262" width="150" height="58" style="stroke:var(--crit)"/><text x="875" y="291" style="fill:var(--crit)">critic</text></g>
+      <g class="gnode rise" data-at="18.6"><rect x="990" y="376" width="150" height="58" style="stroke:var(--fin)"/><text x="1065" y="405" style="fill:var(--fin)">finalize</text></g>
+      <g class="gnode rise" data-at="16.2"><rect x="295" y="408" width="190" height="54" style="stroke-dasharray:6 5"/><text x="390" y="435">researcher ×N</text></g>
 
-      <text class="glabel rise" data-at="15.7" x="14" y="180" style="fill:#7fb6ee">route_from_supervisor</text>
-      <text class="glabel rise" data-at="15.7" x="14" y="204">who works next?</text>
-      <text class="glabel rise" data-at="17.6" x="612" y="356" style="fill:#c88298">route_from_critic — approved, or send it back?</text>
-      <text class="glabel rise" data-at="16.6" x="300" y="446">Send fan-out (map) · operator.add fan-in (reduce)</text>
+      <text class="glabel rise" data-at="17.6" x="600" y="382" style="fill:#c88298">route_from_critic</text>
+      <text class="glabel rise" data-at="18.6" x="962" y="348" style="fill:#4f9e8b">approved</text>
+
+      <text class="glabel rise" data-at="15.7" x="60" y="512" style="fill:#7fb6ee">route_from_supervisor — who works next?</text>
+      <text class="glabel rise" data-at="17.6" x="60" y="544" style="fill:#c88298">route_from_critic — approved, or send it back?</text>
+      <text class="glabel rise" data-at="18.6" x="60" y="576" style="fill:#4f9e8b">FINISH — the critic approved, or the revision cap is spent</text>
+      <text class="glabel rise" data-at="16.6" x="640" y="512">Send fan-out (map) · operator.add fan-in (reduce)</text>
+      <text class="glabel rise" data-at="16.6" x="640" y="544">the concurrency cap is a real semaphore</text>
     </svg>
   </div>
 
@@ -203,13 +216,19 @@
         <tr><td>revisions</td><td class="r">overwrite</td></tr>
       </table>
       <div class="note rise" data-at="23.5"><b>notes</b> has appended since Phase 1 — which is why Phase 5's
-        concurrent fan-in needed no merge code and no state rewrite. Parallelism became a routing change.</div>
+        concurrent fan-in needed no merge code. Parallelism became a routing change.</div>
     </div>
-    <div class="panel rise" data-at="27.5">
+    <div class="panel rise" data-at="26.5">
       <div class="ptitle">keeping the supervisor dumb on tools</div>
-      <div class="note">Every worker is a <b>claude -p</b> subprocess wrapped as a LangChain chat model.
-        The supervisor's process is launched with <b>--tools ""</b> — so a tool violation is not prompted
-        against, it is <b>structurally impossible</b>. It is handed a status summary, never the notes or the draft.</div>
+      <div class="note" style="font-size:20px">Every worker is a <b>claude -p</b> subprocess wrapped as a LangChain
+        chat model. The supervisor's is launched with <b>--tools ""</b> — so a tool violation is not prompted
+        against, it is <b>structurally impossible</b>.</div>
+    </div>
+    <div class="panel rise" data-at="30.0">
+      <div class="ptitle">two guards, two failures</div>
+      <div class="note" style="font-size:20px"><b>max_revisions</b> catches a stubborn critic; <b>recursion_limit</b>
+        catches a routing loop. One showed up: a new draft landing on a stale rejected verdict spun
+        <b>writer → supervisor → writer</b>. Fixed as the brief says — a new draft invalidates its review.</div>
     </div>
   </div>
 </section>
@@ -247,6 +266,10 @@
       <div class="row" id="st-draft"><div class="k">draft</div><div class="v">—</div></div>
       <div class="row" id="st-verdict"><div class="k">verdict</div><div class="v">—</div></div>
       <div class="row" id="st-rev"><div class="k">revisions</div><div class="v">0 of 2</div></div>
+      <div class="row" id="st-final"><div class="k">final_report</div><div class="v">—</div></div>
+      <div class="note" style="font-size:19px;padding:18px 24px;color:#7f93a8">The supervisor never sees any of this.
+        It is handed a status summary — what exists, what is missing — so a worker's output cannot be distorted by
+        passing through it.</div>
     </div>
   </div>
 
@@ -265,6 +288,7 @@
     <div style="margin-top:14px"><span class="k">calls</span>19 &nbsp;&nbsp; <span class="k">cost</span>$1.6675 &nbsp;&nbsp; <span class="k">searches</span>32</div>
     <div><span class="k">wall clock</span>655.6s &nbsp;&nbsp; <span class="k">model time</span>563.9s</div>
     <div style="margin-top:10px;color:#ffd08a">report (2,649 words) → out/report_0fccd2c95218.md</div>
+    <div style="margin-top:6px;font-size:19px;color:#a8697c">shipped with a note that it reached the revision limit without passing review — rather than presenting itself as approved</div>
   </div>
 </section>
 
@@ -298,23 +322,38 @@
 <section class="scene" id="s5" data-start="150" data-end="171">
   <div class="hd"><h2 class="rise" data-at="150.4">Phase 6 — does the team earn its cost?</h2></div>
 
+  <div style="display:flex;flex-direction:column;gap:22px">
   <div class="panel rise" data-at="150.9" style="padding:6px 20px 14px">
     <table class="ev">
       <tr><th>7 paired topics</th><th>n</th><th>quality<br>team → base</th><th>citation integrity</th><th>cost</th><th>latency</th></tr>
       <tr class="rise" data-at="152.0"><td>easy_factual</td><td>3</td><td>3.93 → 4.20 <span class="down">−0.27</span></td><td>3.00 → 3.67 <span class="down">−0.67</span></td><td>5.0×</td><td>4.1×</td></tr>
       <tr class="rise" data-at="155.0"><td>broad_multipart</td><td>2</td><td>4.20 → 4.10 <span class="up">+0.10</span></td><td>3.50 → 3.00 <span class="up">+0.50</span></td><td>4.2×</td><td>3.7×</td></tr>
       <tr class="rise" data-at="156.2"><td>ambiguous</td><td>2</td><td>4.00 → 3.90 <span class="up">+0.10</span></td><td>3.00 → 2.50 <span class="up">+0.50</span></td><td>5.9×</td><td>4.6×</td></tr>
-      <tr class="tot rise" data-at="158.4"><td>ALL</td><td>7</td><td>4.03 → 4.09 <span class="down">−0.06</span></td><td>3.14 → 3.14 &nbsp;0.00</td><td>4.9×</td><td>4.1×</td></tr>
+      <tr class="tot rise" data-at="158.0"><td>ALL</td><td>7</td><td>4.03 → 4.09 <span class="down">−0.06</span></td><td>3.14 → 3.14 &nbsp;0.00</td><td>4.9×</td><td>4.1×</td></tr>
     </table>
   </div>
 
+  <div class="panel rise" data-at="159.5" style="padding:6px 20px 14px">
+    <table class="ev" style="font-size:20px">
+      <tr><th>per topic</th><th>team</th><th>base</th><th>Δ</th><th>team $</th><th>base $</th></tr>
+      <tr><td>ambiguous — remote work &amp; productivity</td><td>3.80</td><td>3.80</td><td>+0.00</td><td>$1.99</td><td>$0.31</td></tr>
+      <tr><td>ambiguous — is nuclear cost-competitive</td><td>4.20</td><td>4.00</td><td class="up">+0.20</td><td>$2.29</td><td>$0.42</td></tr>
+      <tr><td>broad — European negative pricing</td><td>4.00</td><td>4.00</td><td>+0.00</td><td>$1.93</td><td>$0.46</td></tr>
+      <tr><td>broad — solid-state commercialisation</td><td>4.40</td><td>4.20</td><td class="up">+0.20</td><td>$2.43</td><td>$0.59</td></tr>
+      <tr><td>easy — data centre electricity</td><td>3.80</td><td>4.20</td><td class="down">−0.40</td><td>$1.72</td><td>$0.27</td></tr>
+      <tr><td>easy — LFP energy density</td><td>4.00</td><td>4.00</td><td>+0.00</td><td>$1.96</td><td>$0.29</td></tr>
+      <tr><td>easy — DMA enforcement status</td><td>4.00</td><td>4.40</td><td class="down">−0.40</td><td>$1.50</td><td>$0.48</td></tr>
+    </table>
+  </div>
+  </div>
+
   <div class="cards">
-    <div class="card rise" data-at="161.0">
+    <div class="card rise" data-at="162.5">
       <div class="lab">route accuracy</div><div class="v">8 / 8 clean · 100%</div>
       <p>Computed from the run log against explicit preconditions, not judged. No run researched before
         planning, wrote before research finished, or failed to terminate.</p>
     </div>
-    <div class="card rise" data-at="164.0">
+    <div class="card rise" data-at="165.5">
       <div class="lab">the finding</div>
       <p style="color:#dce5ef;font-size:21px">The average is a rounding error — and it hides the story. The team wins where the topic
         genuinely decomposes and <b>loses on easy factual ones</b>, because the planner splits a
@@ -510,8 +549,9 @@ function render(t) {
   setRow("st-outline", t >= 44 ? "5 sub-questions · 5 sections" : "—");
   setRow("st-notes", notes ? "[" + notes + " note" + (notes > 1 ? "s" : "") + "]  ← operator.add" : "[]", notes > 0 && t < 73.5);
   setRow("st-draft", t >= 92 ? "2,649 words (revised)" : t >= 75 ? "thin first draft" : "—");
-  setRow("st-verdict", t >= 101 ? "approved: False" : t >= 83.5 ? "needs work" : "—");
+  setRow("st-verdict", t >= 101 ? "approved: False" : t >= 92 ? "— cleared by the writer" : t >= 83.5 ? "needs work" : "—");
   setRow("st-rev", (t >= 102 ? 2 : t >= 84 ? 1 : 0) + " of 2");
+  setRow("st-final", t >= 117.5 ? "2,649 words + an honest note" : "—");
   qs.forEach((q, i) => {
     q.classList.toggle("on", t >= 45.5 + i * 0.5);
     q.classList.toggle("done", t >= 51.5 + i * 4.6);
@@ -532,7 +572,10 @@ function render(t) {
     }
   }
   verdictEl.classList.toggle("on", !!want);
-  summaryEl.classList.toggle("on", t >= 118.5);
+  const sumOn = t >= 118.5;
+  summaryEl.classList.toggle("on", sumOn);
+  // lift the log above whichever card is covering the bottom of the panel
+  termbody.style.bottom = sumOn ? "290px" : want ? (want === V2 ? "270px" : "200px") : "14px";
 
   /* gantt bars grow */
   bars.forEach((b, i) => {
