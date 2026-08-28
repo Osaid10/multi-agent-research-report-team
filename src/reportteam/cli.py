@@ -238,6 +238,52 @@ def baseline(topic: list[str] = typer.Argument(..., help="The report topic.")) -
     )
 
 
+@app.command("trace-url")
+def trace_url(
+    limit: int = typer.Option(5, help="How many recent root runs to list."),
+    project: Optional[str] = typer.Option(None, help="LangSmith project name."),
+) -> None:
+    """Print shareable LangSmith links for recent runs.
+
+    The brief asks for a trace link as a deliverable, and hunting for one in the
+    LangSmith UI after the fact is tedious. Root runs only -- a single team run
+    produces dozens of nested spans, and the one worth sharing is the top.
+    """
+    enable_utf8_console()
+    Settings.load()
+    if not configure_langsmith():
+        typer.echo("tracing is off -- set LANGSMITH_API_KEY in .env first")
+        raise typer.Exit(1)
+
+    import os
+
+    from langsmith import Client
+
+    client = Client()
+    name = project or os.environ.get("LANGSMITH_PROJECT", "multi-agent-report-team")
+
+    # `is_root` filters server-side, which matters: a single team run produces
+    # dozens of nested spans, and the API refuses a limit above 100, so
+    # over-fetching and filtering here would miss roots on a busy project.
+    try:
+        candidates = client.list_runs(project_name=name, is_root=True, limit=limit)
+    except TypeError:  # older SDK without the filter
+        candidates = client.list_runs(project_name=name, limit=100)
+
+    shown = 0
+    for run in candidates:
+        if run.parent_run_id is not None:
+            continue
+        started = run.start_time.strftime("%Y-%m-%d %H:%M") if run.start_time else "?"
+        typer.echo(f"{started}  {str(run.name)[:28]:28}  {run.url}")
+        shown += 1
+        if shown >= limit:
+            break
+
+    if not shown:
+        typer.echo(f"no root runs found in project {name!r} yet")
+
+
 @app.command()
 def graph(which: str = typer.Option("team", help=f"One of: {', '.join(GRAPHS)}")) -> None:
     """Print a graph's structure as ASCII -- useful for the README."""
